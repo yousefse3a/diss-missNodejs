@@ -79,21 +79,43 @@ async function login(req, res) {
 }
 async function getAllProducts(req, res) {
    let { page } = req.params
-
    try {
-      if (notFound(page) || isNaN(page)) {
-         page = 1
+      let totalProducts = (await executeQuery('SELECT COUNT(product_id) as total FROM products'))[0].total
+      let pages = Math.ceil(+totalProducts / 10);
+      if (notFound(page) || isNaN(page) || pages < +page || +page < 0) {
+         return res.status(StatusCodes.ACCEPTED).json({ "success": false, "message": "No products found" })
       }
-      // let start = ()
-      let totalProducts = await executeQuery('SELECT COUNT(product_id) as total FROM products')
+      let start = (page - 1) * 10;
       let products = await executeQuery(`
-   SELECT p.bigid,p.product_id,p.name,p.price,p.category,p.description,p.media_url AS image,p.stock AS max_stock  FROM products p 
-   start ${0}  limit 10
-   `)
-      console.log(totalProducts)
+   SELECT p.bigid,p.product_id,p.name,p.price,p.category,p.description,p.media_url AS image,p.stock AS max_stock  FROM products p LIMIT ${start}, 10 `);
+      return res.status(StatusCodes.ACCEPTED).json({ "success": true, "data": products, "pages": pages, "total": totalProducts })
+
+   } catch (error) {
+      res.status(StatusCodes.NOT_FOUND).json({ error: "error", error });
+   }
+}
+async function getProfile(req, res) {
+   try {
 
    } catch (error) {
 
+   }
+}
+async function getProductDetails(req,res) {
+   let { bigid } = req.params
+   try {
+      if (notFound(bigid)) {
+         return res.status(StatusCodes.NOT_FOUND).json({ "success": false, "message": "bigid not sent" })
+      }
+      console.log("bigid")
+      let product = await executeQuery(`SELECT * FROM products WHERE bigid = '${bigid}'`)
+      console.log(product)
+      if(product){
+
+      }
+
+   } catch (error) {
+console.log(error)
    }
 }
 
@@ -114,5 +136,7 @@ async function executeQuery(query) {
 export {
    register,
    login,
-   getAllProducts
+   getAllProducts,
+   getProfile,
+   getProductDetails
 }
